@@ -18,8 +18,11 @@ class SearchStrategy:
     ga                  = "ga"
     random              = "random"
     simulated_annealing = "simulated-annealing"
+    exhaustive          = "exhaustive"
 
 class Status:
     passed = "passed"
     failed = "failed"
+    timeout = "timedout"
+    ppcgtimeout = "ppcg_timeout"
     

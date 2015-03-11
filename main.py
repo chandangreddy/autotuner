@@ -16,6 +16,7 @@ def print_summary(search):
             sys.stdout    = output_stream
         config.summarise_timing()
         search.summarise()
+        search.logall()
     finally:
         if config.Arguments.results_file is not None:
             output_stream.close()
@@ -26,6 +27,8 @@ def autotune():
         search = heuristic_search.GA()
     elif config.Arguments.autotune_subcommand == enums.SearchStrategy.random:
         search = heuristic_search.Random()
+    elif config.Arguments.autotune_subcommand == enums.SearchStrategy.exhaustive:
+        search = heuristic_search.Exhaustive()
     elif config.Arguments.autotune_subcommand == enums.SearchStrategy.simulated_annealing:
         search = heuristic_search.SimulatedAnnealing()
     else:
@@ -129,7 +132,7 @@ def the_command_line():
                                             help="how to run the generated binary from the auto-tuner",
                                             required=True)
     
-    runs = 5
+    runs = 1
     building_and_running_group.add_argument("--runs",
                                             type=int,
                                             metavar="<int>",
@@ -140,6 +143,12 @@ def the_command_line():
                                             action="store_true",
                                             help="assume that the binary prints its execution time to standard output (rather than measuring the execution time through Python)",
                                             default=False)
+    
+    
+    building_and_running_group.add_argument("--execution-time-regex",
+                            type=str,
+                            help="regular expression format for execution time",
+                            default=r'^(\d*\.\d+|\d+)$')
     
     # PPCG options
     ppcg_group = parser.add_argument_group("PPCG arguments")
@@ -173,7 +182,7 @@ def the_command_line():
                             help="consider only values in this range when tuning the tile size (default: %d-%d)" % (tile_size_range[0], tile_size_range[1]),
                             default=tile_size_range)
     
-    tile_dimensions = 3
+    tile_dimensions = 1
     ppcg_group.add_argument("--tile-dimensions",
                             type=int,
                             metavar="<int>",
@@ -234,6 +243,16 @@ def the_command_line():
                             help="do not tune kernel sizes individually, i.e. use a uniform tile size for all kernels and let PPCG decide on suitable block and grid sizes",
                             default=False)
     
+    ppcg_group.add_argument("--no-shared-memory",
+                            action="store_false",
+                            help="do not consider shared memory while autotuning",
+                            default=True)
+    
+    ppcg_group.add_argument("--no-private-memory",
+                            action="store_false",
+                            help="do not consider private memory  while autotuning",
+                            default=True)
+
     ppcg_group.add_argument("--all-isl-options",
                             action=ISLAction,
                             metavar="",
@@ -330,8 +349,48 @@ def the_command_line():
                                default=randoms,
                                help="the number of random tests to generate (default: %d)" % randoms)
     
-    parser.parse_args(namespace=config.Arguments)
+    
+    parser_exhaustive = search_subparsers.add_parser(enums.SearchStrategy.exhaustive)
 
+    parser_exhaustive.add_argument("--params-from-file",
+                         action="store_true",
+                         help="read the paramters from the explore-params py",
+                         default=False)
+
+    parser_exhaustive.add_argument("--only-powers-of-two",
+                         action="store_true",
+                         help="Search for parameter values that are powers of two",
+                         default=False)
+
+    parser_exhaustive.add_argument("--all-fusion-structures",
+                         action="store_true",
+                         help="explore all fusion structures [max, min] ",
+                         default=False)
+
+    parser_exhaustive.add_argument("--parallelize-compilation",
+                         action="store_true",
+                         help="parallelize ppcg compilation and execution of test case",
+                         default=False)
+    
+    
+    num_compile_threads = 1
+    parser_exhaustive.add_argument("--num-compile-threads",
+                               type=int,
+                               metavar="<int>",
+                               default=num_compile_threads,
+                               help="number of threads to use for ppcg compilation (default: %d)" % num_compile_threads)
+    
+
+    
+    timeout = 500
+    parser_exhaustive.add_argument("--timeout-ppcg",
+                               type=int,
+                               metavar="<int>",
+                               default=timeout,
+                               help="timeout for ppcg compilation and testcase execution (default: %d sec)" % num_compile_threads)
+    
+    parser.parse_args(namespace=config.Arguments)
+  
 if __name__ == "__main__":
     the_command_line()
     setup_PPCG_flags()

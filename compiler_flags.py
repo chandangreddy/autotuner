@@ -47,7 +47,7 @@ class EnumerationFlag(Flag):
             else:
                 return ""
         else:
-            return "%s %s" % (self.name, value.__str__( ))
+            return "%s=%s" % (self.name, value.__str__( ))
     
 class Size:
     """Models a tile, block or grid size"""
@@ -202,7 +202,15 @@ class SizesFlag(Flag):
                                                                          self.block_size.random_value(),
                                                                          self.grid_size.random_value())
         return per_kernel_size_info
+     
+    def init_value(self, tile_size, block_size, grid_size):
+        per_kernel_size_info = collections.OrderedDict()
+        per_kernel_size_info[SizesFlag.ALL_KERNELS_SENTINEL] = SizeTuple(TileSize(tile_size), 
+                                                                         BlockSize(block_size),
+                                                                         GridSize(grid_size))
+        return per_kernel_size_info
     
+
     def permute(self, value):
         per_kernel_size_info = collections.OrderedDict()
         for kernel_number, size_tuple in value.iteritems():
@@ -301,8 +309,8 @@ class PPCG:
     flag_map[no_isl_schedule_separate_components]  = EnumerationFlag(no_isl_schedule_separate_components)
     flag_map[no_wrap]                              = EnumerationFlag(no_wrap)
     flag_map[no_scale_tile_loops]                  = EnumerationFlag(no_scale_tile_loops)
-    flag_map[no_shared_memory]                     = EnumerationFlag(no_shared_memory)
-    flag_map[no_private_memory]                    = EnumerationFlag(no_private_memory)
+    flag_map[no_shared_memory]                     = EnumerationFlag(no_shared_memory, [True, False])
+    flag_map[no_private_memory]                    = EnumerationFlag(no_private_memory, [True, False])
     flag_map[no_live_range_reordering]             = EnumerationFlag(no_live_range_reordering)
     
     optimisation_flags = []

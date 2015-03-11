@@ -9,6 +9,10 @@ import debug
 import individual
 import collections
 import internal_exceptions
+import itertools
+import os
+from Queue import Queue
+from threading import Thread
 
 class SearchStrategy:
     """Abstract class for a search strategy"""
@@ -20,9 +24,16 @@ class SearchStrategy:
     @abc.abstractmethod
     def summarise(self):
         pass
+
+    @abc.abstractmethod
+    def logall(self):
+        pass
     
 class GA(SearchStrategy):
     """Search using a genetic algorithm"""
+
+    def logall(self):
+        return
     
     def set_child_flags(self, child, the_flags, the_flag_values):
         for idx, flag in enumerate(the_flags):
@@ -291,22 +302,212 @@ class Random(SearchStrategy):
         except internal_exceptions.NoFittestException:
             pass
 
+    def logall(self):
+        for i in self.individuals:
+            debug.summary_message(i.ppcg_cmd_line_flags, False)
+        return
+
+compile_queue = Queue(10)
+run_queue = Queue(10)
+
+class CompileThread(Thread):
+    def run(self):
+        global compile_queue
+        global run_queue
+        while True:
+            testcase = compile_queue.get()
+            if testcase.get_ID() == -1:
+                run_queue.put(testcase)
+                break
+
+            testcase.ppcg()
+            testcase.build()
+            run_queue.put(testcase)
+
+
+class RunThread(Thread):
+    def run(self):
+        global run_queue
+        best_time = float("inf")
+        f = open(config.Arguments.results_file + ".log", 'a')
+        f_iter = open('.lastiter', 'w')
+        while True:
+            testcase = run_queue.get()
+            if testcase.get_ID() == -1:
+                try:
+                    os.remove('.lastiter')
+                except:
+                    pass
+                break
+            testcase.run_with_timeout()
+            f_iter.seek(0)
+            f_iter.write(str(testcase.get_ID()))
+
+            if testcase.execution_time < best_time and testcase.execution_time != 0 and testcase.status == enums.Status.passed: 
+                best_time = testcase.execution_time
+                f.write("\n Best iter so far = \n")
+                f.write(str(testcase))
+                f.flush()
+
+class Exhaustive(SearchStrategy):
+    """Exhaustive search all the values in the specified range or """
+    """all combinations provided in explore-params.py file"""
+
+    def readParamValues(self):
+        f = open('explore-params.py', 'r')
+        paramValues = eval(f.read())
+        f.close()
+        return paramValues
+
+    def countConfigs(self, paramValues):
+        n = 1
+        for i in paramValues:
+            n *= len(i)
+        return n
+
+    def createExhaConfigs(self):
+        tile_size_lb = config.Arguments.tile_size_range[0] 
+        tile_size_ub = config.Arguments.tile_size_range[1]
+        if config.Arguments.only_powers_of_two:
+            tile_size_range = [2**i for i in range(tile_size_lb, tile_size_ub)]
+        else:
+            tile_size_range = range(tile_size_lb, tile_size_ub)
+
+        tile_sizes = itertools.product(tile_size_range, repeat=config.Arguments.tile_dimensions)
+        
+        block_size_lb = config.Arguments.block_size_range[0] 
+        block_size_ub = config.Arguments.block_size_range[1] 
+        if config.Arguments.only_powers_of_two:
+            block_size_range = [2**i for i in range(block_size_lb, block_size_ub)]
+        else:
+            block_size_range = range(block_size_lb, block_size_ub)
+
+        block_sizes = itertools.product(tile_size_range, repeat=config.Arguments.block_dimensions)
+
+        grid_size_lb = config.Arguments.grid_size_range[0] 
+        grid_size_ub = config.Arguments.grid_size_range[1] 
+        if config.Arguments.only_powers_of_two:
+            grid_size_range = [2**i for i in range(grid_size_lb, grid_size_ub)]
+        else:
+            grid_size_range = range(grid_size_lb, grid_size_ub)
+
+        grid_sizes = itertools.product(grid_size_range, repeat=config.Arguments.grid_dimensions)
+
+        if config.Arguments.no_shared_memory:
+            shared_mem = [True, False]
+        else:
+            shared_mem = [False]
+
+        if config.Arguments.no_private_memory:
+            private_mem = [True, False]
+        else:
+            private_mem = [False]
+
+        if config.Arguments.all_fusion_structures:
+            fusion = ['max', 'min']
+        else:
+            fusion = ['max']
+
+        paramValues = [tile_sizes, block_sizes, grid_sizes, private_mem, shared_mem, fusion]
+        return paramValues
+
+    def pipelineExec(self, combs):
+        num_threads = config.Arguments.num_compile_threads
+        for i in range(num_threads):
+            CompileThread().start()
+
+        RunThread().start()
+
+        cnt = 0
+        for conf in combs:
+            print '---- Configuration ' + str(cnt) + ': ' + str(conf)
+            cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4])
+            cur.set_ID(cnt)
+            cnt += 1
+            compile_queue.put(cur)
+
+        cur.set_ID(-1)
+        for i in range(num_threads):
+            compile_queue.put(cur)
+       
+
+    def run(self):
+        self.individuals = []
+
+        if config.Arguments.params_from_file:
+            paramValues = self.readParamValues()
+        else:
+            paramValues = self.createExhaConfigs()
+
+        cnt = 0
+        combs = itertools.product(*paramValues)
+        if config.Arguments.parallelize_compilation:
+            self.pipelineExec(combs)
+            return
+
+        f = open(config.Arguments.results_file + ".log", 'a')
+        best_time = 0
+        #print 'Parameter values to be explored: ' + str(paramValues)
+        #print 'Number of configurations: ' + str(self.countConfigs(paramValues))
+        for conf in combs:
+            print '---- Configuration ' + str(cnt) + ': ' + str(conf)
+            cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4], conf[5])
+            cur.set_ID(cnt)
+            cnt += 1
+            cur.run(best_time)
+            if cur.status == enums.Status.ppcgtimeout :
+                f.write("\nppcg timeout")
+                f.write(str(best_run))
+                f.flush()
+                continue
+                
+            if cur.execution_time == 0:
+                continue
+
+            if cur.execution_time < best_time and cur.status == enums.Status.passed:
+                self.individuals.append(cur)
+                best_time = cur.execution_time
+                best_run = cur
+                f.write("\n Best iter so far = "+ str(i) + "\n")
+                f.write(str(best_run))
+                f.flush()
+
+    def summarise(self):
+        print("%s Summary of %s %s" % ('*' * 30, __name__, '*' * 30))
+        try:
+            fittest = individual.get_fittest(self.individuals)
+            debug.summary_message("The fittest individual had execution time %f seconds" % (fittest.execution_time)) 
+            debug.summary_message("To replicate, pass the following to PPCG:")
+            debug.summary_message(fittest.ppcg_cmd_line_flags, False)
+        except internal_exceptions.NoFittestException:
+           pass
+
+    def logall(self):
+        print("%s Log of all runs %s" %('*' * 30, '*' * 30))
+        for i in self.individuals:
+            print(i)
+            debug.summary_message(i.ppcg_cmd_line_flags, False)
+        pass
+
 class SimulatedAnnealing(SearchStrategy):
-    """Search using simulated annealing"""
-    
-    def acceptance_probability(self, currentEnergy, newEnergy, temperature):
+   """Search using simulated annealing""" 
+
+   def acceptance_probability(self, currentEnergy, newEnergy, temperature):
         if newEnergy < currentEnergy:
             return 1.0
-        return math.exp((currentEnergy - newEnergy) / temperature)
-    
-    def mutate_backend_flags(self, clone_flags, solution_flags):
+        return math.exp((currentEnergy - newEnergy) / temperature) 
+
+   def logall(self):
+        return
+
+   def mutate_backend_flags(self, clone_flags, solution_flags):
         for the_flag in solution_flags.keys():   
             if bool(random.getrandbits(1)):
                 idx    = the_flag.possible_values.index(solution_flags[the_flag])
                 newIdx = (idx + 1) % len(the_flag.possible_values)
                 clone_flags[the_flag] = the_flag.possible_values[newIdx]
     
-    def mutate(self, solution):
+   def mutate(self, solution):
         clone    = copy.deepcopy(solution)
         clone.ID = individual.Individual.get_ID()
         for the_flag in solution.ppcg_flags.keys():   
@@ -324,7 +525,7 @@ class SimulatedAnnealing(SearchStrategy):
         self.mutate_backend_flags(clone.nvcc_flags, solution.nvcc_flags)
         return clone
     
-    def run(self):        
+   def run(self):        
         debug.verbose_message("Creating initial solution", __name__)
         current = individual.create_random()
         current.run()   
@@ -344,7 +545,7 @@ class SimulatedAnnealing(SearchStrategy):
                     if current.execution_time < self.fittest.execution_time:
                         self.fittest = current
     
-    def summarise(self):
+   def summarise(self):
         debug.summary_message("The final individual had execution time %f seconds" % (self.fittest.execution_time)) 
         debug.summary_message("To replicate, pass the following to PPCG:")
         debug.summary_message(self.fittest.ppcg_cmd_line_flags, False)
