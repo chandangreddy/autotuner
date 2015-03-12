@@ -132,7 +132,7 @@ def the_command_line():
                                             help="how to run the generated binary from the auto-tuner",
                                             required=True)
     
-    runs = 1
+    runs = 5
     building_and_running_group.add_argument("--runs",
                                             type=int,
                                             metavar="<int>",
@@ -182,7 +182,7 @@ def the_command_line():
                             help="consider only values in this range when tuning the tile size (default: %d-%d)" % (tile_size_range[0], tile_size_range[1]),
                             default=tile_size_range)
     
-    tile_dimensions = 1
+    tile_dimensions = 3
     ppcg_group.add_argument("--tile-dimensions",
                             type=int,
                             metavar="<int>",
