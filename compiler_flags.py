@@ -47,7 +47,7 @@ class EnumerationFlag(Flag):
             else:
                 return ""
         else:
-            return "%s=%s" % (self.name, value.__str__( ))
+            return "%s %s" % (self.name, value.__str__( ))
     
 class Size:
     """Models a tile, block or grid size"""
