@@ -170,7 +170,10 @@ class Individual:
         return True
 
     def build(self):
-        build_cmd = config.Arguments.build_cmd + ' ' + self.file_name()+ '_host.cu ' + self.file_name()+ '_kernel.cu '+ '-o '+ self.file_name()+'.exe'
+        if config.Arguments.target == enums.Target.cuda:
+            build_cmd = config.Arguments.build_cmd + ' ' + self.file_name()+ '_host.cu ' + self.file_name()+ '_kernel.cu '+ '-o '+ self.file_name()+'.exe'
+        else:
+            build_cmd = config.Arguments.build_cmd + ' ' + self.file_name()+ '_host.c ' + '-o '+ self.file_name()+'.exe'
         debug.verbose_message("Running '%s'" % build_cmd, __name__)
         start  = timeit.default_timer()
         proc   = subprocess.Popen(build_cmd, shell=True)  
