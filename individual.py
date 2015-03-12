@@ -143,7 +143,12 @@ class Individual:
                                                                     ' '.join(flag.get_command_line_string(self.ppcg_flags[flag]) for flag in self.ppcg_flags.keys()))
         
         os.environ["AUTOTUNER_PPCG_FLAGS"] = self.ppcg_cmd_line_flags
-        cmd = config.Arguments.ppcg_cmd + ' '+self.ppcg_cmd_line_flags+' -o '+self.file_name()
+
+        if config.Arguments.target == enums.Targets.cuda:
+            cmd = config.Arguments.ppcg_cmd + ' '+self.ppcg_cmd_line_flags+' -o '+self.file_name()
+        else:
+            cmd = config.Arguments.ppcg_cmd + ' '+self.ppcg_cmd_line_flags+' -o '+self.file_name()+'_host.c'
+
         debug.verbose_message("Running '%s'" % cmd, __name__)
         #debug.verbose_message("Running '%s'" % self.ppcg_cmd_line_flags , __name__)
         start  = timeit.default_timer()
@@ -170,7 +175,7 @@ class Individual:
         return True
 
     def build(self):
-        if config.Arguments.target == enums.Target.cuda:
+        if config.Arguments.target == enums.Targets.cuda:
             build_cmd = config.Arguments.build_cmd + ' ' + self.file_name()+ '_host.cu ' + self.file_name()+ '_kernel.cu '+ '-o '+ self.file_name()+'.exe'
         else:
             build_cmd = config.Arguments.build_cmd + ' ' + self.file_name()+ '_host.c ' + '-o '+ self.file_name()+'.exe'
