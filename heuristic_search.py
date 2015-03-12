@@ -490,7 +490,7 @@ class Exhaustive(SearchStrategy):
         pass
 
 class SimulatedAnnealing(SearchStrategy):
-   """Search using simulated annealing""" 
+   """Search using simulated annealing"""
 
    def acceptance_probability(self, currentEnergy, newEnergy, temperature):
         if newEnergy < currentEnergy:
