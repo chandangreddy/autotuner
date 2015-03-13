@@ -178,7 +178,7 @@ class Individual:
         if config.Arguments.target == enums.Targets.cuda:
             build_cmd = config.Arguments.build_cmd + ' ' + self.file_name()+ '_host.cu ' + self.file_name()+ '_kernel.cu '+ '-o '+ self.file_name()+'.exe'
         else:
-            build_cmd = config.Arguments.build_cmd + ' ' + self.file_name()+ '_host.c ' + '-o '+ self.file_name()+'.exe'
+            build_cmd = config.Arguments.build_cmd + ' ' + self.file_name()+ '_host.c ' + '-o '+ self.file_name()+'.exe' + ' -lprl -lOpenCL'
         debug.verbose_message("Running '%s'" % build_cmd, __name__)
         start  = timeit.default_timer()
         proc   = subprocess.Popen(build_cmd, shell=True)  
@@ -199,7 +199,7 @@ class Individual:
 
     def binary(self):
         #time_regex = re.compile(r'^(\d*\.\d+|\d+)$')
-        print config.Arguments.execution_time_regex
+        #print config.Arguments.execution_time_regex
         time_regex = re.compile(config.Arguments.execution_time_regex)
         total_time = 0.0
         status     = enums.Status.passed
