@@ -130,7 +130,7 @@ def the_command_line():
     building_and_running_group.add_argument("--run-cmd",
                                             metavar="<STRING>",
                                             help="how to run the generated binary from the auto-tuner",
-                                            required=True)
+                                            required=False)
     
     runs = 5
     building_and_running_group.add_argument("--runs",
