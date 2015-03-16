@@ -11,6 +11,12 @@ import threading
 import internal_exceptions
 import time
 
+class EndOfQueue:
+    def __init__(self):
+        pass
+
+
+
 def get_fittest(population):
     fittest = None
     for individual in population:
@@ -218,14 +224,18 @@ class Individual:
             if config.Arguments.execution_time_from_binary:
                 if not stdout:
                     raise internal_exceptions.BinaryRunException("Expected the binary to dump its execution time. Found nothing")
+                nmatchedlines = 0
                 for line in stdout.split(os.linesep):
                     line    = line.strip()
                     matches = time_regex.findall(line)
                     if matches:
+                        nmatchedlines += 1
                         try:
                             total_time += float(matches[0])
                         except:
                             raise internal_exceptions.BinaryRunException("Execution time '%s' is not in the required format" % matches[0])
+                if nmatchedlines == 0:
+                    raise internal_exceptions.BinaryRunException("Regular expression did not match anything on the program's output")
             else:
                 total_time += end - start
         self.status = status
