@@ -316,7 +316,7 @@ class CompileThread(Thread):
         global run_queue
         while True:
             testcase = compile_queue.get()
-            if testcase.get_ID() == -1:
+            if isinstance(testcase, individual.EndOfQueue):
                 run_queue.put(testcase)
                 break
 
@@ -326,19 +326,30 @@ class CompileThread(Thread):
 
 
 class RunThread(Thread):
+    def __init__(self, num_threads):
+        super(RunThread, self).__init__()
+        self.num_threads = num_threads
+
     def run(self):
         global run_queue
         best_time = float("inf")
         f = open(config.Arguments.results_file + ".log", 'a')
         f_iter = open('.lastiter', 'w')
         while True:
+            print('***run thread waiting')
             testcase = run_queue.get()
-            if testcase.get_ID() == -1:
-                try:
-                    os.remove('.lastiter')
-                except:
-                    pass
-                break
+            if isinstance(testcase, individual.EndOfQueue):
+                self.num_threads = self.num_threads - 1
+                print('***remaining threads: ' + str(self.num_threads))
+                if self.num_threads<=0:
+                    try:
+                       os.remove('.lastiter')
+                    except:
+                       pass
+                    print('***run thread exiting')
+                    break
+                continue
+            print('***run thread got job')
             testcase.run_with_timeout()
             f_iter.seek(0)
             f_iter.write(str(testcase.get_ID()))
@@ -414,9 +425,11 @@ class Exhaustive(SearchStrategy):
     def pipelineExec(self, combs):
         num_threads = config.Arguments.num_compile_threads
         for i in range(num_threads):
-            CompileThread().start()
+            t = CompileThread()
+            t.daemon = True
+            t.start()
 
-        RunThread().start()
+        RunThread(num_threads).start()
 
         cnt = 0
         for conf in combs:
@@ -426,9 +439,8 @@ class Exhaustive(SearchStrategy):
             cnt += 1
             compile_queue.put(cur)
 
-        cur.set_ID(-1)
         for i in range(num_threads):
-            compile_queue.put(cur)
+            compile_queue.put(individual.EndOfQueue()) # So every CompileThread fetches one EndOfQueue element
        
 
     def run(self):

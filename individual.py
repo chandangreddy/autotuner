@@ -11,6 +11,12 @@ import threading
 import internal_exceptions
 import time
 
+class EndOfQueue:
+    def __init__(self):
+        pass
+
+
+
 def get_fittest(population):
     fittest = None
     for individual in population:
