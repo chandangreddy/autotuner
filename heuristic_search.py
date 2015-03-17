@@ -531,7 +531,7 @@ class Exhaustive(SearchStrategy):
                 self.individuals.append(cur)
                 best_time = cur.execution_time
                 best_run = cur
-                f.write("\n Best iter so far = "+ str(i) + "\n")
+                f.write("\n Best iter so far = "+ str(cnt) + "\n")
                 f.write(str(best_run))
                 f.flush()
 
