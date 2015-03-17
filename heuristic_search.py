@@ -336,7 +336,7 @@ class RunThread(Thread):
         f = open(config.Arguments.results_file + ".log", 'a')
         f_iter = open('.lastiter', 'w')
         while True:
-            print('***run thread waiting')
+            #print('***run thread waiting')
             testcase = run_queue.get()
             if isinstance(testcase, individual.EndOfQueue):
                 self.num_threads = self.num_threads - 1
@@ -349,7 +349,7 @@ class RunThread(Thread):
                     print('***run thread exiting')
                     break
                 continue
-            print('***run thread got job')
+            #print('***run thread got job')
             testcase.run_with_timeout()
             f_iter.seek(0)
             f_iter.write(str(testcase.get_ID()))
@@ -442,6 +442,22 @@ class Exhaustive(SearchStrategy):
         for i in range(num_threads):
             compile_queue.put(individual.EndOfQueue()) # So every CompileThread fetches one EndOfQueue element
        
+    def tile_size_multiple_filter(self, conf):
+        tile_size = conf[0]
+        block_size = conf[1]
+
+        mul_factor = 1
+        for t, b in zip(tile_size, block_size):
+            if t < b:
+                return False
+            if t % b != 0:
+                return False
+            mul_factor *= t/b
+
+        if mul_factor > 36:
+            return False
+
+        return True
 
     def run(self):
         self.individuals = []
@@ -453,6 +469,16 @@ class Exhaustive(SearchStrategy):
 
         cnt = 0
         combs = itertools.product(*paramValues)
+
+
+        if config.Arguments.filter_testcases:
+            #Filter out only test cases based on heusristics such as tile size is multiple of block size etc.. 
+            combs = filter(self.tile_size_multiple_filter, combs)
+            #Filter out only test cases where shared memory is true
+            combs = filter(lambda conf: conf[3] == True, combs)
+            #Filter out only test cases where private memory is true
+            combs = filter(lambda conf: conf[4] == True, combs)
+
         if config.Arguments.parallelize_compilation:
             self.pipelineExec(combs)
             return

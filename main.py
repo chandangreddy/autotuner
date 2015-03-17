@@ -367,6 +367,12 @@ def the_command_line():
                          help="explore all fusion structures [max, min] ",
                          default=False)
 
+
+    parser_exhaustive.add_argument("--filter-testcases",
+                         action="store_true",
+                         help="few heursitics to reduce search space such as tile size multiple of block size, tile size > block size etc..",
+                         default=False)
+
     parser_exhaustive.add_argument("--parallelize-compilation",
                          action="store_true",
                          help="parallelize ppcg compilation and execution of test case",
