@@ -422,7 +422,23 @@ class Exhaustive(SearchStrategy):
         paramValues = [tile_sizes, block_sizes, grid_sizes, private_mem, shared_mem, fusion]
         return paramValues
 
+    def get_last_iter(self):
+        if os.path.isfile(".lastiter"):
+            print("found last iter")
+            try:
+                f_iter = open(".lastiter", 'r+')
+                start_iter = int(f_iter.readline())
+            except:
+                start_iter = 0
+            print("starting from test case = ", start_iter)
+        else:
+            start_iter = 0
+
+        return start_iter
+
     def pipelineExec(self, combs):
+
+        start_iter = self.get_last_iter()
         num_threads = config.Arguments.num_compile_threads
         for i in range(num_threads):
             t = CompileThread()
@@ -433,6 +449,9 @@ class Exhaustive(SearchStrategy):
 
         cnt = 0
         for conf in combs:
+            if cnt < start_iter:
+                cnt += 1
+                continue
             print '---- Configuration ' + str(cnt) + ': ' + str(conf)
             cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4])
             cur.set_ID(cnt)
@@ -484,10 +503,15 @@ class Exhaustive(SearchStrategy):
             return
 
         f = open(config.Arguments.results_file + ".log", 'a')
+        start_iter = self.get_last_iter()
+
         best_time = 0
         #print 'Parameter values to be explored: ' + str(paramValues)
         #print 'Number of configurations: ' + str(self.countConfigs(paramValues))
         for conf in combs:
+            if cnt < start_iter:
+                cnt += 1
+                continue
             print '---- Configuration ' + str(cnt) + ': ' + str(conf)
             cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4], conf[5])
             cur.set_ID(cnt)
