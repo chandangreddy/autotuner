@@ -430,6 +430,7 @@ class Exhaustive(SearchStrategy):
                 start_iter = int(f_iter.readline())
             except:
                 start_iter = 0
+                pass
             print("starting from test case = ", start_iter)
         else:
             start_iter = 0
@@ -503,9 +504,9 @@ class Exhaustive(SearchStrategy):
             return
 
         f = open(config.Arguments.results_file + ".log", 'a')
-        start_iter = self.get_last_iter()
+        start_iter = 0
 
-        best_time = 0
+        best_time = float("inf")
         #print 'Parameter values to be explored: ' + str(paramValues)
         #print 'Number of configurations: ' + str(self.countConfigs(paramValues))
         for conf in combs:
