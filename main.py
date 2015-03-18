@@ -386,7 +386,14 @@ def the_command_line():
                                default=num_compile_threads,
                                help="number of threads to use for ppcg compilation (default: %d)" % num_compile_threads)
     
-
+    
+    max_work_group_size = 256 
+    parser_exhaustive.add_argument("--max-work-group-size",
+                               type=int,
+                               metavar="<int>",
+                               default=max_work_group_size,
+                               help="max work group size, test cases with work group size greater than this value will be filtered out (default: %d)" % num_compile_threads)
+    
     
     timeout = 500
     parser_exhaustive.add_argument("--timeout-ppcg",

@@ -466,6 +466,10 @@ class Exhaustive(SearchStrategy):
         tile_size = conf[0]
         block_size = conf[1]
 
+        work_group_size = reduce(lambda x,y: x*y, block_size)
+        if work_group_size > config.Arguments.max_work_group_size:
+            return False
+
         mul_factor = 1
         for t, b in zip(tile_size, block_size):
             if t < b:
