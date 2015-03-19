@@ -324,11 +324,11 @@ class CompileThread(Thread):
             testcase.build()
             run_queue.put(testcase)
 
-
 class RunThread(Thread):
     def __init__(self, num_threads):
         super(RunThread, self).__init__()
         self.num_threads = num_threads
+        self.individuals = []
 
     def run(self):
         global run_queue
@@ -344,6 +344,8 @@ class RunThread(Thread):
                 if self.num_threads<=0:
                     try:
                        os.remove('.lastiter')
+                       self.summarise()
+                       self.logall()
                     except:
                        pass
                     print('***run thread exiting')
@@ -355,10 +357,28 @@ class RunThread(Thread):
             f_iter.write(str(testcase.get_ID()))
 
             if testcase.execution_time < best_time and testcase.execution_time != 0 and testcase.status == enums.Status.passed: 
+                self.individuals.append(testcase)
                 best_time = testcase.execution_time
                 f.write("\n Best iter so far = \n")
                 f.write(str(testcase))
                 f.flush()
+
+    def summarise(self):
+        print("%s Summary of %s %s" % ('*' * 30, __name__, '*' * 30))
+        try:
+            fittest = individual.get_fittest(self.individuals)
+            debug.summary_message("The fittest individual had execution time %f seconds" % (fittest.execution_time)) 
+            debug.summary_message("To replicate, pass the following to PPCG:")
+            debug.summary_message(fittest.ppcg_cmd_line_flags, False)
+        except internal_exceptions.NoFittestException:
+           pass
+
+    def logall(self):
+        print("%s Log of all runs %s" %('*' * 30, '*' * 30))
+        for i in self.individuals:
+            print(i)
+            debug.summary_message(i.ppcg_cmd_line_flags, False)
+        pass
 
 class Exhaustive(SearchStrategy):
     """Exhaustive search all the values in the specified range or """
