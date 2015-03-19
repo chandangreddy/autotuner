@@ -413,7 +413,7 @@ class Exhaustive(SearchStrategy):
         else:
             block_size_range = range(block_size_lb, block_size_ub)
 
-        block_sizes = itertools.product(tile_size_range, repeat=config.Arguments.block_dimensions)
+        block_sizes = itertools.product(block_size_range, repeat=config.Arguments.block_dimensions)
 
         grid_size_lb = config.Arguments.grid_size_range[0] 
         grid_size_ub = config.Arguments.grid_size_range[1] 
