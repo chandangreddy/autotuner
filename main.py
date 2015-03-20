@@ -410,6 +410,14 @@ def the_command_line():
                                default=timeout,
                                help="timeout for ppcg compilation and testcase execution (default: %d sec)" % num_compile_threads)
     
+    
+    max_exec_time_var = 20 
+    parser_exhaustive.add_argument("--max-exec-time-var",
+                               type=int,
+                               metavar="<int>",
+                               default=max_exec_time_var,
+                               help="max allowed variance for execution time. If the execution time of a test case is greater that best so far + max-exec-time-var then number of runs is restricted to 1 (default: %d )" % max_exec_time_var)
+    
     parser.parse_args(namespace=config.Arguments)
   
 if __name__ == "__main__":

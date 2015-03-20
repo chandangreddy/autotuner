@@ -1,4 +1,4 @@
-import timeit
+umport timeit
 import os
 import re
 import debug
@@ -136,13 +136,14 @@ class Individual:
                 #print("Auto tuning restarted")
                 break
 
-    def compile(self, timeout=2):
+    def compile(self, timeout=float("inf")):
         self.checkforpause()
-        sucess=self.ppcg_with_timeout()
-        if not sucess:
-            return
+        self.ppcg()
+        #sucess=self.ppcg_with_timeout(timeout)
+        #if not sucess:
+        #    return
         self.build()
-        self.run_with_timeout(timeout)
+        self.binary(timeout)
 
     def ppcg(self):
         self.ppcg_cmd_line_flags = "--target=%s --dump-sizes %s" % (config.Arguments.target, 
@@ -168,7 +169,7 @@ class Individual:
         self.size_data = compiler_flags.SizesFlag.parse_PPCG_dump_sizes(stderr)
         
 
-    def ppcg_with_timeout(self, timeout=200):
+    def ppcg_with_timeout(self, timeout=float("inf")):
         thread = threading.Thread(target=self.ppcg)
         thread.start()
         thread.join(timeout)
@@ -203,12 +204,13 @@ class Individual:
         except:
             pass
 
-    def binary(self):
+    def binary(self, best_execution_time=float("inf")):
         #time_regex = re.compile(r'^(\d*\.\d+|\d+)$')
         #print config.Arguments.execution_time_regex
         time_regex = re.compile(config.Arguments.execution_time_regex)
         total_time = 0.0
         status     = enums.Status.passed
+        num_actual_runs = 0
         for run in xrange(1,config.Arguments.runs+1):
             run_cmd = './'+self.file_name()+'.exe'
             #run_cmd = config.Arguments.run_cmd
@@ -238,9 +240,18 @@ class Individual:
                     raise internal_exceptions.BinaryRunException("Regular expression did not match anything on the program's output")
             else:
                 total_time += end - start
+
+            num_actual_runs +=1
+            per_var = 1 + config.Arguments.max_exec_time_var/100
+            time = per_var  * best_execution_time
+            if total_time > (best_execution_time + per_var  * best_execution_time ):
+                #print "Execution time of cur test case is worst than the best so far, stopping at first run" 
+                break
+
+            
         self.status = status
         config.time_binary += total_time
-        self.execution_time = total_time/config.Arguments.runs
+        self.execution_time = total_time/num_actual_runs
 
         self.deleteFile(self.file_name()+'.exe')
         self.deleteFile(self.file_name()+'_host.c')

@@ -352,7 +352,7 @@ class RunThread(Thread):
                     break
                 continue
             #print('***run thread got job')
-            testcase.run_with_timeout()
+            testcase.run(best_time)
             f_iter.seek(0)
             f_iter.write(str(testcase.get_ID()))
 
