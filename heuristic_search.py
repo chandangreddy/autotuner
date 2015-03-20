@@ -490,6 +490,9 @@ class Exhaustive(SearchStrategy):
         if work_group_size > config.Arguments.max_work_group_size:
             return False
 
+        if work_group_size < config.Arguments.min_work_group_size:
+            return False
+
         mul_factor = 1
         for t, b in zip(tile_size, block_size):
             if t < b:

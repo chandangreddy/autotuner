@@ -392,8 +392,16 @@ def the_command_line():
                                type=int,
                                metavar="<int>",
                                default=max_work_group_size,
-                               help="max work group size, test cases with work group size greater than this value will be filtered out (default: %d)" % num_compile_threads)
+                               help="max work group size, test cases with work group size greater than this value will be filtered out (default: %d)" % max_work_group_size)
     
+    
+    
+    min_work_group_size = 1 
+    parser_exhaustive.add_argument("--min-work-group-size",
+                               type=int,
+                               metavar="<int>",
+                               default=min_work_group_size,
+                               help="min work group size, test cases with work group size lesser than this value will be filtered out (default: %d)" % min_work_group_size)
     
     timeout = 500
     parser_exhaustive.add_argument("--timeout-ppcg",
