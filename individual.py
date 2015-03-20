@@ -1,4 +1,4 @@
-umport timeit
+import timeit
 import os
 import re
 import debug
@@ -244,7 +244,7 @@ class Individual:
             num_actual_runs +=1
             per_var = 1 + config.Arguments.max_exec_time_var/100
             time = per_var  * best_execution_time
-            if total_time > (best_execution_time + per_var  * best_execution_time ):
+            if total_time > time * num_actual_runs:
                 #print "Execution time of cur test case is worst than the best so far, stopping at first run" 
                 break
 
