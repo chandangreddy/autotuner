@@ -251,7 +251,10 @@ class Individual:
             
         self.status = status
         config.time_binary += total_time
-        self.execution_time = total_time/num_actual_runs
+        if num_actual_runs != 0:
+            self.execution_time = total_time/num_actual_runs
+        else 
+            self.execution_time = total_time
 
         self.deleteFile(self.file_name()+'.exe')
         self.deleteFile(self.file_name()+'_host.c')
