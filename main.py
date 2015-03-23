@@ -132,6 +132,19 @@ def the_command_line():
                                             help="how to run the generated binary from the auto-tuner",
                                             required=False)
     
+    
+    building_and_running_group.add_argument("--run-cmd-input",
+                                            metavar="<STRING>",
+                                            help="input to the generated binary from the auto-tuner",
+                                            required=False,
+                                            default="")
+
+    
+    building_and_running_group.add_argument("--cmd-string-complete",
+                                            action="store_true",
+                                            help="dont modify the cmd string, note the output file nmaes should be part of cmd lines",
+                                            default=False)
+
     runs = 5
     building_and_running_group.add_argument("--runs",
                                             type=int,
@@ -144,6 +157,11 @@ def the_command_line():
                                             help="assume that the binary prints its execution time to standard output (rather than measuring the execution time through Python)",
                                             default=False)
     
+    building_and_running_group.add_argument("--binary-file-name",
+                                            metavar="<STRING>",
+                                            help="name of the generated binary from the auto-tuner",
+                                            required=False,
+                                            default="")
     
     building_and_running_group.add_argument("--execution-time-regex",
                             type=str,

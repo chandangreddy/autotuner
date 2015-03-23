@@ -85,6 +85,9 @@ class Individual:
         return Individual.ID
     
     def file_name(self):
+        if config.Arguments.binary_file_name:
+            return config.Arguments.binary_file_name
+
         return 'testcase'+str(self.ID)
         #return 'gemm'
 
@@ -151,7 +154,9 @@ class Individual:
         
         os.environ["AUTOTUNER_PPCG_FLAGS"] = self.ppcg_cmd_line_flags
 
-        if config.Arguments.target == enums.Targets.cuda:
+        if config.Arguments.cmd_string_complete:
+            cmd = config.Arguments.ppcg_cmd
+        elif config.Arguments.target == enums.Targets.cuda:
             cmd = config.Arguments.ppcg_cmd + ' '+self.ppcg_cmd_line_flags+' -o '+self.file_name()
         else:
             cmd = config.Arguments.ppcg_cmd + ' '+self.ppcg_cmd_line_flags+' -o '+self.file_name()+'_host.c'
@@ -182,7 +187,9 @@ class Individual:
         return True
 
     def build(self):
-        if config.Arguments.target == enums.Targets.cuda:
+        if config.Arguments.cmd_string_complete:
+            build_cmd = config.Arguments.build_cmd
+        elif config.Arguments.target == enums.Targets.cuda:
             build_cmd = config.Arguments.build_cmd + ' ' + self.file_name()+ '_host.cu ' + self.file_name()+ '_kernel.cu '+ '-o '+ self.file_name()+'.exe'
         else:
             build_cmd = config.Arguments.build_cmd + ' ' + self.file_name()+ '_host.c ' + '-o '+ self.file_name()+'.exe' + ' -lprl -lOpenCL'
@@ -212,7 +219,10 @@ class Individual:
         status     = enums.Status.passed
         num_actual_runs = 0
         for run in xrange(1,config.Arguments.runs+1):
-            run_cmd = './'+self.file_name()+'.exe'
+            if config.Arguments.cmd_string_complete:
+                run_cmd = config.Arguments.run_cmd
+            else:
+                run_cmd = './'+self.file_name()+'.exe '+config.Arguments.run_cmd_input
             #run_cmd = config.Arguments.run_cmd
             debug.verbose_message("Run #%d of '%s'" % (run, run_cmd), __name__)
             start = timeit.default_timer()
