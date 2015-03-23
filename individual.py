@@ -155,7 +155,7 @@ class Individual:
         os.environ["AUTOTUNER_PPCG_FLAGS"] = self.ppcg_cmd_line_flags
 
         if config.Arguments.cmd_string_complete:
-            cmd = config.Arguments.ppcg_cmd
+            cmd = config.Arguments.ppcg_cmd+ ' '+self.ppcg_cmd_line_flags
         elif config.Arguments.target == enums.Targets.cuda:
             cmd = config.Arguments.ppcg_cmd + ' '+self.ppcg_cmd_line_flags+' -o '+self.file_name()
         else:
