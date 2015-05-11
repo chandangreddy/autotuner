@@ -439,7 +439,7 @@ class Exhaustive(SearchStrategy):
         else:
             fusion = ['max']
 
-        paramValues = [tile_sizes, block_sizes, grid_sizes, private_mem, shared_mem, fusion]
+        paramValues = [tile_sizes, block_sizes, grid_sizes, shared_mem, private_mem, fusion]
         return paramValues
 
     def get_last_iter(self):

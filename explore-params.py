@@ -12,10 +12,10 @@
   [(1,1), (1,2), (1,4), (1,8),
    (16,16), (32,32), (64,64)],
 
-  #private memory
+  #Shared memory
   [False],
 
-  #Shared memory
+  #private memory
   [False, True],
 
   #Fusion
