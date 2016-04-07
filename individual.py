@@ -108,6 +108,9 @@ class Individual:
         self.execution_time   = float("inf") 
         self.num = 0
         self.kernel_num=compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL
+        self.per_kernel_time = [] 
+        for k in config.Arguments.kernels_to_tune:
+            self.per_kernel_time.append(float("inf"))
         
     def all_flags(self):
         return self.ppcg_flags.keys() + self.cc_flags.keys() + self.cxx_flags.keys() + self.nvcc_flags.keys()
@@ -213,6 +216,32 @@ class Individual:
         except:
             pass
 
+    def extract_kernel_time(self, kernel_num, stdout):
+        re_str = r'kernel'+str(kernel_num)+'\s*:\s*(\d*.\d+)ms'
+        print re_str
+        time_regex = re.compile(re_str)
+        total_time = 0.0
+
+        nmatchedlines = 0
+        for line in stdout.split(os.linesep):
+            line    = line.strip()
+            matches = time_regex.findall(line)
+            if matches:
+                nmatchedlines += 1
+                try:
+                    total_time += float(matches[0])
+                except:
+                    raise internal_exceptions.BinaryRunException("Execution time '%s' is not in the required format" % matches[0])
+        if nmatchedlines == 0:
+            total_time = float("inf")
+        return total_time
+
+    def update_kernel_times(self, stdout):
+        if not config.Arguments.prl_profiling:
+            return
+        for k in config.Arguments.kernels_to_tune:
+            self.per_kernel_time[k] = self.extract_kernel_time(k, stdout)
+
     def binary(self, best_execution_time=float("inf")):
         #time_regex = re.compile(r'^(\d*\.\d+|\d+)$')
         #print config.Arguments.execution_time_regex
@@ -247,6 +276,7 @@ class Individual:
             if config.Arguments.execution_time_from_binary:
                 if not stdout:
                     raise internal_exceptions.BinaryRunException("Expected the binary to dump its execution time. Found nothing")
+                self.update_kernel_times(stdout)
                 nmatchedlines = 0
                 for line in stdout.split(os.linesep):
                     line    = line.strip()

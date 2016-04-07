@@ -509,7 +509,14 @@ class Exhaustive(SearchStrategy):
 
     def run(self):
         self.individuals = []
+        self.multi_kernel = False
         self.output_stream = open(config.Arguments.results_file, 'w')
+        if config.Arguments.no_concurrent_kernel_tuning:
+            self.multi_kernel = True
+            self.tune_kernel(compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL)
+            self.print_summary()
+            return
+            
         for k in config.Arguments.kernels_to_tune:
             self.individuals = []
             self.tune_kernel(k)
@@ -543,6 +550,12 @@ class Exhaustive(SearchStrategy):
         start_iter = 0
 
         best_time = float("inf")
+        best_kernel_time = [] 
+        self.best_kernel_run = []
+        if self.multi_kernel:
+            for s in config.Arguments.kernels_to_tune:
+                best_kernel_time.append(float("inf"))
+                self.best_kernel_run.append(0)
         #print 'Parameter values to be explored: ' + str(paramValues)
         #print 'Number of configurations: ' + str(self.countConfigs(paramValues))
         for conf in combs:
@@ -563,6 +576,15 @@ class Exhaustive(SearchStrategy):
             if cur.execution_time == 0:
                 continue
 
+            if self.multi_kernel:
+                for k in config.Arguments.kernels_to_tune:
+                    if cur.per_kernel_time[k] < best_kernel_time[k]:
+                        best_kernel_time[k] = cur.per_kernel_time[k]
+                        self.best_kernel_run[k] = cur
+                        f.write("\n Best time so far for kernel "+str(k) + " ID " +  str(cnt) + " kernel time = " + str(best_kernel_time[k]))
+                        f.write(str(cur.ppcg_cmd_line_flags))
+                        f.flush()
+
             if cur.execution_time < best_time and cur.status == enums.Status.passed:
                 self.individuals.append(cur)
                 best_time = cur.execution_time
@@ -570,6 +592,14 @@ class Exhaustive(SearchStrategy):
                 f.write("\n Best iter so far = "+ str(cnt) + "\n")
                 f.write(str(best_run))
                 f.flush()
+
+            
+    def summarise_per_kernel(self):
+        for k in config.Arguments.kernels_to_tune:
+            print "Best config for kernel " + str(k)
+            print("had execution time %f ms" % (self.best_kernel_run[k].execution_time)) 
+            print("To replicate, use the following configuration:")
+            print(self.best_kernel_run[k].ppcg_cmd_line_flags, False)
 
     def summarise(self):
         print("%s Summary of %s %s" % ('*' * 30, __name__, '*' * 30))
@@ -594,7 +624,10 @@ class Exhaustive(SearchStrategy):
         try:
             if config.Arguments.results_file is not None:
                 sys.stdout    = self.output_stream
-                self.summarise()
+                if self.multi_kernel:
+                    self.summarise_per_kernel()
+                else:
+                    self.summarise()
                 #self.logall()
         finally:
             if config.Arguments.results_file is not None:

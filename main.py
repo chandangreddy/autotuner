@@ -174,6 +174,11 @@ def the_command_line():
                                             action="store_true",
                                             help="Using prl profiling, used to extract timing info from prl profiling output",
                                             default=False)
+
+    building_and_running_group.add_argument("--no-concurrent-kernel-tuning",
+                                            action="store_false",
+                                            help="Do not tune multiple kernels at the same time",
+                                            default=True)
     # PPCG options
     ppcg_group = parser.add_argument_group("PPCG arguments")
     
