@@ -30,10 +30,11 @@ def get_fittest(population):
         raise internal_exceptions.NoFittestException("None of the individuals among this population completed successfully, hence there is no fittest individual")
     return fittest
 
-def create_test_case(tile_size, block_size, grid_size, shared_mem=True, private_mem=True, fusion='max'):
+def create_test_case(tile_size, block_size, grid_size, shared_mem=True, private_mem=True, fusion='max', k=compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL):
     individual = Individual()   
     per_kernel_size_info = collections.OrderedDict()
-    per_kernel_size_info[compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL] = compiler_flags.SizeTuple(tile_size, block_size, grid_size)
+    per_kernel_size_info[k] = compiler_flags.SizeTuple(tile_size, block_size, grid_size)
+    individual.kernel_num = k
 
     #for flag in compiler_flags.PPCG.optimisation_flags:
     #    print(flag)
@@ -106,6 +107,7 @@ class Individual:
         self.status           = enums.Status.failed
         self.execution_time   = float("inf") 
         self.num = 0
+        self.kernel_num=compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL
         
     def all_flags(self):
         return self.ppcg_flags.keys() + self.cc_flags.keys() + self.cxx_flags.keys() + self.nvcc_flags.keys()
@@ -214,7 +216,16 @@ class Individual:
     def binary(self, best_execution_time=float("inf")):
         #time_regex = re.compile(r'^(\d*\.\d+|\d+)$')
         #print config.Arguments.execution_time_regex
-        time_regex = re.compile(config.Arguments.execution_time_regex)
+        if config.Arguments.prl_profiling:
+            if self.kernel_num == compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL:
+                re_str = r'compute\s*:\s*(\d*.\d+)ms'
+            else:
+                re_str = r'kernel'+str(self.kernel_num)+'\s*:\s*(\d*.\d+)ms'
+        else:
+            re_str = config.Arguments.execution_time_regex
+
+        print re_str
+        time_regex = re.compile(re_str)
         total_time = 0.0
         status     = enums.Status.passed
         num_actual_runs = 0
@@ -258,7 +269,6 @@ class Individual:
                 #print "Execution time of cur test case is worst than the best so far, stopping at first run" 
                 break
 
-            
         self.status = status
         config.time_binary += total_time
         if num_actual_runs != 0:

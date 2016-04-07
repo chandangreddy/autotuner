@@ -9,6 +9,7 @@ import heuristic_search
 import sys
 
 def print_summary(search):
+    return 
     try:
         if config.Arguments.results_file is not None:
             old_stdout    = sys.stdout
@@ -145,7 +146,7 @@ def the_command_line():
                                             help="dont modify the cmd string, note the output file nmaes should be part of cmd lines",
                                             default=False)
 
-    runs = 5
+    runs = 1
     building_and_running_group.add_argument("--runs",
                                             type=int,
                                             metavar="<int>",
@@ -168,11 +169,16 @@ def the_command_line():
                             help="regular expression format for execution time",
                             default=r'^(\d*\.\d+|\d+)$')
     
+    
+    building_and_running_group.add_argument("--prl-profiling",
+                                            action="store_true",
+                                            help="Using prl profiling, used to extract timing info from prl profiling output",
+                                            default=False)
     # PPCG options
     ppcg_group = parser.add_argument_group("PPCG arguments")
     
     ppcg_group.add_argument("--target",
-                            choices=[enums.Targets.cuda, enums.Targets.opencl],
+                            choices=[enums.Targets.cuda, enums.Targets.opencl, enums.Targets.prl],
                             help="the target to generate code for",
                             default=enums.Targets.opencl)
     
@@ -192,6 +198,13 @@ def the_command_line():
                             metavar="<LIST>",
                             help="consider only these values when tuning the shared memory size (default: %s)" % (shared_memory_possibilties),
                             default=shared_memory_possibilties)
+     
+    kernels_list = [compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL]
+    ppcg_group.add_argument("--kernels-to-tune",
+                            type=int_csv,
+                            metavar="<LIST>",
+                            help="consider only these kernels values when tuning (default: all)",
+                            default=kernels_list)
     
     tile_size_range = (2**0, 2**6)
     ppcg_group.add_argument("--tile-size-range",
@@ -389,7 +402,7 @@ def the_command_line():
     parser_exhaustive.add_argument("--filter-testcases",
                          action="store_true",
                          help="few heursitics to reduce search space such as tile size multiple of block size, tile size > block size etc..",
-                         default=False)
+                         default=True)
 
     parser_exhaustive.add_argument("--parallelize-compilation",
                          action="store_true",
@@ -405,7 +418,7 @@ def the_command_line():
                                help="number of threads to use for ppcg compilation (default: %d)" % num_compile_threads)
     
     
-    max_work_group_size = 256 
+    max_work_group_size = 1024
     parser_exhaustive.add_argument("--max-work-group-size",
                                type=int,
                                metavar="<int>",

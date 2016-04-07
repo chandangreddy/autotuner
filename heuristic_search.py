@@ -13,6 +13,7 @@ import itertools
 import os
 from Queue import Queue
 from threading import Thread
+import sys
 
 class SearchStrategy:
     """Abstract class for a search strategy"""
@@ -508,6 +509,14 @@ class Exhaustive(SearchStrategy):
 
     def run(self):
         self.individuals = []
+        self.output_stream = open(config.Arguments.results_file, 'w')
+        for k in config.Arguments.kernels_to_tune:
+            self.individuals = []
+            self.tune_kernel(k)
+            self.print_summary()
+        self.output_stream.close()
+
+    def tune_kernel(self, k):
 
         if config.Arguments.params_from_file:
             paramValues = self.readParamValues()
@@ -522,9 +531,9 @@ class Exhaustive(SearchStrategy):
             #Filter out only test cases based on heusristics such as tile size is multiple of block size etc.. 
             combs = filter(self.tile_size_multiple_filter, combs)
             #Filter out only test cases where shared memory is true
-            combs = filter(lambda conf: conf[3] == True, combs)
+            #combs = filter(lambda conf: conf[3] == True, combs)
             #Filter out only test cases where private memory is true
-            combs = filter(lambda conf: conf[4] == True, combs)
+            #combs = filter(lambda conf: conf[4] == True, combs)
 
         if config.Arguments.parallelize_compilation:
             self.pipelineExec(combs)
@@ -541,7 +550,7 @@ class Exhaustive(SearchStrategy):
                 cnt += 1
                 continue
             print '---- Configuration ' + str(cnt) + ': ' + str(conf)
-            cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4], conf[5])
+            cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4], conf[5], k)
             cur.set_ID(cnt)
             cnt += 1
             cur.run(best_time)
@@ -578,6 +587,18 @@ class Exhaustive(SearchStrategy):
             print(i)
             debug.summary_message(i.ppcg_cmd_line_flags, False)
         pass
+
+
+    def print_summary(self):
+        old_stdout    = sys.stdout
+        try:
+            if config.Arguments.results_file is not None:
+                sys.stdout    = self.output_stream
+                self.summarise()
+                #self.logall()
+        finally:
+            if config.Arguments.results_file is not None:
+                sys.stdout = old_stdout
 
 class SimulatedAnnealing(SearchStrategy):
    """Search using simulated annealing"""
