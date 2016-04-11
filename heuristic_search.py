@@ -452,6 +452,7 @@ class Exhaustive(SearchStrategy):
             except:
                 start_iter = 0
                 pass
+            f_iter.close()
             print("starting from test case = ", start_iter)
         else:
             start_iter = 0
@@ -523,7 +524,7 @@ class Exhaustive(SearchStrategy):
             self.print_summary()
         self.output_stream.close()
 
-    def tune_kernel(self, k):
+    def tune_kernel(self, ker_num):
 
         if config.Arguments.params_from_file:
             paramValues = self.readParamValues()
@@ -546,8 +547,10 @@ class Exhaustive(SearchStrategy):
             self.pipelineExec(combs)
             return
 
+        start_iter = self.get_last_iter() 
+
         f = open(config.Arguments.results_file + ".log", 'a')
-        start_iter = 0
+        f_iter = open('.lastiter', 'w')
 
         best_time = float("inf")
         best_kernel_time = [] 
@@ -563,7 +566,7 @@ class Exhaustive(SearchStrategy):
                 cnt += 1
                 continue
             print '---- Configuration ' + str(cnt) + ': ' + str(conf)
-            cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4], conf[5], k)
+            cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4], conf[5], ker_num)
             cur.set_ID(cnt)
             cnt += 1
             cur.run(best_time)
@@ -577,12 +580,13 @@ class Exhaustive(SearchStrategy):
                 continue
 
             if self.multi_kernel:
+                #f.write("\n====================================\n")
                 for k in config.Arguments.kernels_to_tune:
                     if cur.per_kernel_time[k] < best_kernel_time[k]:
                         best_kernel_time[k] = cur.per_kernel_time[k]
                         self.best_kernel_run[k] = cur
                         f.write("\n Best time so far for kernel "+str(k) + " ID " +  str(cnt) + " kernel time = " + str(best_kernel_time[k]))
-                        f.write(str(cur.ppcg_cmd_line_flags))
+                        f.write(str(cur.ppcg_cmd_line_flags) + str("\n"))
                         f.flush()
 
             if cur.execution_time < best_time and cur.status == enums.Status.passed:
@@ -593,11 +597,14 @@ class Exhaustive(SearchStrategy):
                 f.write(str(best_run))
                 f.flush()
 
+            f_iter.seek(0)
+            f_iter.write(str(cur.get_ID()))
+
             
     def summarise_per_kernel(self):
         for k in config.Arguments.kernels_to_tune:
             print "Best config for kernel " + str(k)
-            print("had execution time %f ms" % (self.best_kernel_run[k].execution_time)) 
+            print("had execution time %f ms" % (self.best_kernel_time[k])) 
             print("To replicate, use the following configuration:")
             print(self.best_kernel_run[k].ppcg_cmd_line_flags, False)
 

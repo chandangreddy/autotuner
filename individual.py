@@ -218,7 +218,6 @@ class Individual:
 
     def extract_kernel_time(self, kernel_num, stdout):
         re_str = r'kernel'+str(kernel_num)+'\s*:\s*(\d*.\d+)ms'
-        print re_str
         time_regex = re.compile(re_str)
         total_time = 0.0
 
