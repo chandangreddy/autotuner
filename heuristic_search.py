@@ -13,6 +13,7 @@ import itertools
 import os
 from Queue import Queue
 from threading import Thread
+import sys
 
 class SearchStrategy:
     """Abstract class for a search strategy"""
@@ -446,6 +447,7 @@ class Exhaustive(SearchStrategy):
             except:
                 start_iter = 0
                 pass
+            f_iter.close()
             print("starting from test case = ", start_iter)
         else:
             start_iter = 0
@@ -503,6 +505,21 @@ class Exhaustive(SearchStrategy):
 
     def run(self):
         self.individuals = []
+        self.multi_kernel = False
+        self.output_stream = open(config.Arguments.results_file, 'w')
+        if config.Arguments.no_concurrent_kernel_tuning:
+            self.multi_kernel = True
+            self.tune_kernel(compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL)
+            self.print_summary()
+            return
+            
+        for k in config.Arguments.kernels_to_tune:
+            self.individuals = []
+            self.tune_kernel(k)
+            self.print_summary()
+        self.output_stream.close()
+
+    def tune_kernel(self, ker_num):
 
         if config.Arguments.params_from_file:
             paramValues = self.readParamValues()
@@ -517,18 +534,26 @@ class Exhaustive(SearchStrategy):
             #Filter out only test cases based on heusristics such as tile size is multiple of block size etc.. 
             combs = filter(self.tile_size_multiple_filter, combs)
             #Filter out only test cases where shared memory is true
-            combs = filter(lambda conf: conf[3] == True, combs)
+            #combs = filter(lambda conf: conf[3] == True, combs)
             #Filter out only test cases where private memory is true
-            combs = filter(lambda conf: conf[4] == True, combs)
+            #combs = filter(lambda conf: conf[4] == True, combs)
 
         if config.Arguments.parallelize_compilation:
             self.pipelineExec(combs)
             return
 
+        start_iter = self.get_last_iter() 
+
         f = open(config.Arguments.results_file + ".log", 'a')
-        start_iter = 0
+        f_iter = open('.lastiter', 'w')
 
         best_time = float("inf")
+        best_kernel_time = [] 
+        self.best_kernel_run = []
+        if self.multi_kernel:
+            for s in config.Arguments.kernels_to_tune:
+                best_kernel_time.append(float("inf"))
+                self.best_kernel_run.append(0)
         #print 'Parameter values to be explored: ' + str(paramValues)
         #print 'Number of configurations: ' + str(self.countConfigs(paramValues))
         for conf in combs:
@@ -536,7 +561,7 @@ class Exhaustive(SearchStrategy):
                 cnt += 1
                 continue
             print '---- Configuration ' + str(cnt) + ': ' + str(conf)
-            cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4]])
+            cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4], ker_num)
             cur.set_ID(cnt)
             cnt += 1
             cur.run(best_time)
@@ -549,6 +574,16 @@ class Exhaustive(SearchStrategy):
             if cur.execution_time == 0:
                 continue
 
+            if self.multi_kernel:
+                #f.write("\n====================================\n")
+                for k in config.Arguments.kernels_to_tune:
+                    if cur.per_kernel_time[k] < best_kernel_time[k]:
+                        best_kernel_time[k] = cur.per_kernel_time[k]
+                        self.best_kernel_run[k] = cur
+                        f.write("\n Best time so far for kernel "+str(k) + " ID " +  str(cnt) + " kernel time = " + str(best_kernel_time[k]))
+                        f.write(str(cur.ppcg_cmd_line_flags) + str("\n"))
+                        f.flush()
+
             if cur.execution_time < best_time and cur.status == enums.Status.passed:
                 self.individuals.append(cur)
                 best_time = cur.execution_time
@@ -556,6 +591,17 @@ class Exhaustive(SearchStrategy):
                 f.write("\n Best iter so far = "+ str(cnt) + "\n")
                 f.write(str(best_run))
                 f.flush()
+
+            f_iter.seek(0)
+            f_iter.write(str(cur.get_ID()))
+
+            
+    def summarise_per_kernel(self):
+        for k in config.Arguments.kernels_to_tune:
+            print "Best config for kernel " + str(k)
+            print("had execution time %f ms" % (self.best_kernel_time[k])) 
+            print("To replicate, use the following configuration:")
+            print(self.best_kernel_run[k].ppcg_cmd_line_flags, False)
 
     def summarise(self):
         print("%s Summary of %s %s" % ('*' * 30, __name__, '*' * 30))
@@ -573,6 +619,21 @@ class Exhaustive(SearchStrategy):
             print(i)
             debug.summary_message(i.ppcg_cmd_line_flags, False)
         pass
+
+
+    def print_summary(self):
+        old_stdout    = sys.stdout
+        try:
+            if config.Arguments.results_file is not None:
+                sys.stdout    = self.output_stream
+                if self.multi_kernel:
+                    self.summarise_per_kernel()
+                else:
+                    self.summarise()
+                #self.logall()
+        finally:
+            if config.Arguments.results_file is not None:
+                sys.stdout = old_stdout
 
 class SimulatedAnnealing(SearchStrategy):
    """Search using simulated annealing"""

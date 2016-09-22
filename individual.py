@@ -30,10 +30,11 @@ def get_fittest(population):
         raise internal_exceptions.NoFittestException("None of the individuals among this population completed successfully, hence there is no fittest individual")
     return fittest
 
-def create_test_case(tile_size, block_size, grid_size, shared_mem=True, private_mem=True):
+def create_test_case(tile_size, block_size, grid_size, shared_mem=True, private_mem=True, k=compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL):
     individual = Individual()   
     per_kernel_size_info = collections.OrderedDict()
-    per_kernel_size_info[compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL] = compiler_flags.SizeTuple(tile_size, block_size, grid_size)
+    per_kernel_size_info[k] = compiler_flags.SizeTuple(tile_size, block_size, grid_size)
+    individual.kernel_num = k
 
     #for flag in compiler_flags.PPCG.optimisation_flags:
     #    print(flag)
@@ -106,6 +107,10 @@ class Individual:
         self.status           = enums.Status.failed
         self.execution_time   = float("inf") 
         self.num = 0
+        self.kernel_num=compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL
+        self.per_kernel_time = [] 
+        for k in config.Arguments.kernels_to_tune:
+            self.per_kernel_time.append(float("inf"))
         
     def all_flags(self):
         return self.ppcg_flags.keys() + self.cc_flags.keys() + self.cxx_flags.keys() + self.nvcc_flags.keys()
@@ -209,10 +214,44 @@ class Individual:
         except:
             pass
 
+    def extract_kernel_time(self, kernel_num, stdout):
+        re_str = r'kernel'+str(kernel_num)+'\s*:\s*(\d*.\d+)ms'
+        time_regex = re.compile(re_str)
+        total_time = 0.0
+
+        nmatchedlines = 0
+        for line in stdout.split(os.linesep):
+            line    = line.strip()
+            matches = time_regex.findall(line)
+            if matches:
+                nmatchedlines += 1
+                try:
+                    total_time += float(matches[0])
+                except:
+                    raise internal_exceptions.BinaryRunException("Execution time '%s' is not in the required format" % matches[0])
+        if nmatchedlines == 0:
+            total_time = float("inf")
+        return total_time
+
+    def update_kernel_times(self, stdout):
+        if not config.Arguments.prl_profiling:
+            return
+        for k in config.Arguments.kernels_to_tune:
+            self.per_kernel_time[k] = self.extract_kernel_time(k, stdout)
+
     def binary(self, best_execution_time=float("inf")):
         #time_regex = re.compile(r'^(\d*\.\d+|\d+)$')
         #print config.Arguments.execution_time_regex
-        time_regex = re.compile(config.Arguments.execution_time_regex)
+        if config.Arguments.prl_profiling:
+            if self.kernel_num == compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL:
+                re_str = r'compute\s*:\s*(\d*.\d+)ms'
+            else:
+                re_str = r'kernel'+str(self.kernel_num)+'\s*:\s*(\d*.\d+)ms'
+        else:
+            re_str = config.Arguments.execution_time_regex
+
+        print re_str
+        time_regex = re.compile(re_str)
         total_time = 0.0
         status     = enums.Status.passed
         num_actual_runs = 0
@@ -234,6 +273,7 @@ class Individual:
             if config.Arguments.execution_time_from_binary:
                 if not stdout:
                     raise internal_exceptions.BinaryRunException("Expected the binary to dump its execution time. Found nothing")
+                self.update_kernel_times(stdout)
                 nmatchedlines = 0
                 for line in stdout.split(os.linesep):
                     line    = line.strip()
@@ -256,7 +296,6 @@ class Individual:
                 #print "Execution time of cur test case is worst than the best so far, stopping at first run" 
                 break
 
-            
         self.status = status
         config.time_binary += total_time
         if num_actual_runs != 0:

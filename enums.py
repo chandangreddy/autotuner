@@ -1,6 +1,7 @@
 class Targets:
     cuda   = "cuda"
     opencl = "opencl"
+    prl    = "prl"
     
 class Crossover:
     one_point = "one_point"
