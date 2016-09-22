@@ -380,11 +380,6 @@ def the_command_line():
                          help="Search for parameter values that are powers of two",
                          default=False)
 
-    parser_exhaustive.add_argument("--all-fusion-structures",
-                         action="store_true",
-                         help="explore all fusion structures [max, min] ",
-                         default=False)
-
 
     parser_exhaustive.add_argument("--filter-testcases",
                          action="store_true",

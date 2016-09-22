@@ -434,12 +434,7 @@ class Exhaustive(SearchStrategy):
         else:
             private_mem = [False]
 
-        if config.Arguments.all_fusion_structures:
-            fusion = ['max', 'min']
-        else:
-            fusion = ['max']
-
-        paramValues = [tile_sizes, block_sizes, grid_sizes, shared_mem, private_mem, fusion]
+        paramValues = [tile_sizes, block_sizes, grid_sizes, shared_mem, private_mem]
         return paramValues
 
     def get_last_iter(self):
@@ -541,7 +536,7 @@ class Exhaustive(SearchStrategy):
                 cnt += 1
                 continue
             print '---- Configuration ' + str(cnt) + ': ' + str(conf)
-            cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4], conf[5])
+            cur = individual.create_test_case(conf[0], conf[1], conf[2], conf[3], conf[4]])
             cur.set_ID(cnt)
             cnt += 1
             cur.run(best_time)

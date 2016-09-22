@@ -30,7 +30,7 @@ def get_fittest(population):
         raise internal_exceptions.NoFittestException("None of the individuals among this population completed successfully, hence there is no fittest individual")
     return fittest
 
-def create_test_case(tile_size, block_size, grid_size, shared_mem=True, private_mem=True, fusion='max'):
+def create_test_case(tile_size, block_size, grid_size, shared_mem=True, private_mem=True):
     individual = Individual()   
     per_kernel_size_info = collections.OrderedDict()
     per_kernel_size_info[compiler_flags.SizesFlag.ALL_KERNELS_SENTINEL] = compiler_flags.SizeTuple(tile_size, block_size, grid_size)
@@ -54,8 +54,8 @@ def create_test_case(tile_size, block_size, grid_size, shared_mem=True, private_
         individual.ppcg_flags[flag] = True 
 
     #Set isl fusion flag
-    flag = compiler_flags.PPCG.optimisation_flags[6]
-    individual.ppcg_flags[flag] = fusion
+    #flag = compiler_flags.PPCG.optimisation_flags[6]
+    #individual.ppcg_flags[flag] = fusion
     #string  = individual.ppcg_flags[flag].get_command_line_string(1024)
     #print(string)
     #print("end")

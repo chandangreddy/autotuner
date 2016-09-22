@@ -18,6 +18,4 @@
   #private memory
   [False, True],
 
-  #Fusion
-  ['max', 'min']
 ])
