@@ -170,8 +170,6 @@ class Individual:
         config.time_PPCG += end - start
         if self.ppcg_proc.returncode:
             raise internal_exceptions.FailedCompilationException("FAILED: '%s'" % config.Arguments.ppcg_cmd)         
-        # Store the sizes used by PPCG
-        self.size_data = compiler_flags.SizesFlag.parse_PPCG_dump_sizes(stderr)
         
 
     def ppcg_with_timeout(self, timeout=float("inf")):
